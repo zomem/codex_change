@@ -90,9 +90,9 @@ impl FeedbackNoteView {
             Ok(()) => {
                 let issue_url = format!("{BASE_ISSUE_URL}&steps=Uploaded%20thread:%20{thread_id}");
                 let prefix = if self.include_logs {
-                    "● Feedback uploaded."
+                    "• Feedback uploaded."
                 } else {
-                    "● Feedback recorded (no logs)."
+                    "• Feedback recorded (no logs)."
                 };
                 self.app_event_tx.send(AppEvent::InsertHistoryCell(Box::new(
                     history_cell::PlainHistoryCell::new(vec![
@@ -408,12 +408,12 @@ pub(crate) fn feedback_upload_consent_params(
         Line::from("Upload logs?".bold()).into(),
         Line::from("").into(),
         Line::from("The following files will be sent:".dim()).into(),
-        Line::from(vec!["  ● ".into(), "codex-logs.log".into()]).into(),
+        Line::from(vec!["  • ".into(), "codex-logs.log".into()]).into(),
     ];
     if let Some(path) = rollout_path.as_deref()
         && let Some(name) = path.file_name().map(|s| s.to_string_lossy().to_string())
     {
-        header_lines.push(Line::from(vec!["  ● ".into(), name.into()]).into());
+        header_lines.push(Line::from(vec!["  • ".into(), name.into()]).into());
     }
 
     super::SelectionViewParams {

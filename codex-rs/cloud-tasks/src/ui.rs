@@ -111,7 +111,7 @@ pub fn draw_new_task_page(frame: &mut Frame, area: Rect, app: &mut App) {
             .and_then(|p| p.env_id.as_ref())
             .cloned()
         {
-            spans.push("  ● ".into());
+            spans.push("  • ".into());
             // Try to map id to label
             let label = app
                 .environments
@@ -121,11 +121,11 @@ pub fn draw_new_task_page(frame: &mut Frame, area: Rect, app: &mut App) {
                 .unwrap_or(id);
             spans.push(label.dim());
         } else {
-            spans.push("  ● ".into());
+            spans.push("  • ".into());
             spans.push("Env: none (press ctrl-o to choose)".red());
         }
         if let Some(page) = app.new_task.as_ref() {
-            spans.push("  ● ".into());
+            spans.push("  • ".into());
             let attempts = page.best_of_n;
             let label = format!(
                 "{} attempt{}",
@@ -192,16 +192,16 @@ fn draw_list(frame: &mut Frame, area: Rect, app: &mut App) {
             .find(|r| &r.id == id)
             .and_then(|r| r.label.clone())
             .unwrap_or_else(|| "Selected".to_string());
-        format!(" ● {label}").dim()
+        format!(" • {label}").dim()
     } else {
-        " ● All".dim()
+        " • All".dim()
     };
     // Percent scrolled based on selection position in the list (0% at top, 100% at bottom).
     let percent_span = if app.tasks.len() <= 1 {
-        "  ● 0%".dim()
+        "  • 0%".dim()
     } else {
         let p = ((app.selected as f32) / ((app.tasks.len() - 1) as f32) * 100.0).round() as i32;
-        format!("  ● {}%", p.clamp(0, 100)).dim()
+        format!("  • {}%", p.clamp(0, 100)).dim()
     };
     let title_line = {
         let base = Line::from(vec!["Cloud Tasks".into(), suffix_span, percent_span]);
@@ -352,7 +352,7 @@ fn draw_diff_overlay(frame: &mut Frame, area: Rect, app: &mut App) {
         .as_ref()
         .and_then(|o| o.sd.percent_scrolled())
     {
-        title_spans.push("  ● ".dim());
+        title_spans.push("  • ".dim());
         title_spans.push(format!("{p}%").dim());
     }
     frame.render_widget(Clear, inner);
@@ -527,7 +527,7 @@ pub fn draw_apply_modal(frame: &mut Frame, area: Rect, app: &mut App) {
                     );
                     for p in &m.conflict_paths {
                         body_lines
-                            .push(Line::from(vec!["  ● ".into(), Span::raw(p.clone()).dim()]));
+                            .push(Line::from(vec!["  • ".into(), Span::raw(p.clone()).dim()]));
                     }
                 }
                 if !m.skipped_paths.is_empty() {
@@ -539,7 +539,7 @@ pub fn draw_apply_modal(frame: &mut Frame, area: Rect, app: &mut App) {
                     );
                     for p in &m.skipped_paths {
                         body_lines
-                            .push(Line::from(vec!["  ● ".into(), Span::raw(p.clone()).dim()]));
+                            .push(Line::from(vec!["  • ".into(), Span::raw(p.clone()).dim()]));
                     }
                 }
             }
@@ -667,7 +667,7 @@ fn conversation_header_line(
             if let Some(attempt) = attempt
                 && let Some(status_span) = attempt_status_span(attempt.status)
             {
-                spans.push("  ● ".dim());
+                spans.push("  • ".dim());
                 spans.push(status_span);
             }
         }
@@ -706,7 +706,7 @@ fn conversation_text_spans(
             if indent > 0 {
                 spans.push(Span::raw(" ".repeat(indent)));
             }
-            spans.push("● ".into());
+            spans.push("• ".into());
             spans.push(Span::raw(rest.to_string()));
             return spans;
         }
@@ -807,7 +807,7 @@ fn render_task_item(_app: &App, t: &codex_cloud_tasks_client::TaskSummary) -> Li
     let when = format_relative_time(t.updated_at).dim();
     if !meta.is_empty() {
         meta.push("  ".into());
-        meta.push("●".dim());
+        meta.push("•".dim());
         meta.push("  ".into());
     }
     meta.push(when);
@@ -826,7 +826,7 @@ fn render_task_item(_app: &App, t: &codex_cloud_tasks_client::TaskSummary) -> Li
             "/".into(),
             format!("−{dels}").red(),
             " ".into(),
-            "●".dim(),
+            "•".dim(),
             " ".into(),
             format!("{files}").into(),
             " ".into(),
@@ -872,7 +872,7 @@ fn draw_inline_spinner(
     let start = spinner_start.get_or_insert_with(Instant::now);
     let blink_on = (start.elapsed().as_millis() / 600).is_multiple_of(2);
     let dot = if blink_on {
-        "● ".into()
+        "• ".into()
     } else {
         "◦ ".dim()
     };

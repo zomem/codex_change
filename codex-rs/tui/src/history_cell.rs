@@ -181,7 +181,7 @@ impl ReasoningSummaryCell {
             Some((width as usize).saturating_sub(2)),
             &mut lines,
         );
-        let summary_style = Style::default().magenta();
+        let summary_style = Style::default().dim().italic();
         let summary_lines = lines
             .into_iter()
             .map(|mut line| {
@@ -197,7 +197,7 @@ impl ReasoningSummaryCell {
         word_wrap_lines(
             &summary_lines,
             RtOptions::new(width as usize)
-                .initial_indent("● ".dim().into())
+                .initial_indent("• ".dim().into())
                 .subsequent_indent("  ".into()),
         )
     }
@@ -250,7 +250,7 @@ impl HistoryCell for AgentMessageCell {
             &self.lines,
             RtOptions::new(width as usize)
                 .initial_indent(if self.is_first_line {
-                    "● ".dim().into()
+                    "• ".dim().into()
                 } else {
                     "  ".into()
                 })
@@ -584,11 +584,7 @@ pub(crate) fn new_session_info(
     let SessionConfiguredEvent {
         model,
         reasoning_effort,
-        session_id: _,
-        history_log_id: _,
-        history_entry_count: _,
-        initial_messages: _,
-        rollout_path: _,
+        ..
     } = event;
     SessionInfoCell(if is_first_event {
         // Header box rendered as history (so it appears at the very top)
@@ -712,6 +708,7 @@ impl SessionHeaderHistoryCell {
             ReasoningEffortConfig::Low => "low",
             ReasoningEffortConfig::Medium => "medium",
             ReasoningEffortConfig::High => "high",
+            ReasoningEffortConfig::XHigh => "xhigh",
             ReasoningEffortConfig::None => "none",
         })
     }
@@ -878,8 +875,8 @@ impl HistoryCell for McpToolCallCell {
         let mut lines: Vec<Line<'static>> = Vec::new();
         let status = self.success();
         let bullet = match status {
-            Some(true) => "●".green().bold(),
-            Some(false) => "●".red().bold(),
+            Some(true) => "•".green().bold(),
+            Some(false) => "•".red().bold(),
             None => spinner(Some(self.start_time)),
         };
         let header_text = if status.is_some() {
@@ -1018,10 +1015,8 @@ fn try_new_completed_mcp_tool_call_with_image_output(
 }
 
 #[allow(clippy::disallowed_methods)]
-pub(crate) fn new_warning_event(message: String) -> PlainHistoryCell {
-    PlainHistoryCell {
-        lines: vec![vec![format!("⚠ {message}").yellow()].into()],
-    }
+pub(crate) fn new_warning_event(message: String) -> PrefixedWrappedHistoryCell {
+    PrefixedWrappedHistoryCell::new(message.yellow(), "⚠ ".yellow(), "  ")
 }
 
 #[derive(Debug)]
@@ -1063,7 +1058,7 @@ pub(crate) fn empty_mcp_output() -> PlainHistoryCell {
         "".into(),
         vec!["🔌  ".into(), "MCP Tools".bold()].into(),
         "".into(),
-        "  ● No MCP servers configured.".italic().into(),
+        "  • No MCP servers configured.".italic().into(),
         Line::from(vec![
             "    See the ".into(),
             "\u{1b}]8;;https://github.com/openai/codex/blob/main/docs/config.md#mcp_servers\u{7}MCP docs\u{1b}]8;;\u{7}".underlined(),
@@ -1091,7 +1086,7 @@ pub(crate) fn new_mcp_tools_output(
     ];
 
     if tools.is_empty() {
-        lines.push("  ● No MCP tools available.".italic().into());
+        lines.push("  • No MCP tools available.".italic().into());
         lines.push("".into());
         return PlainHistoryCell { lines };
     }
@@ -1112,7 +1107,7 @@ pub(crate) fn new_mcp_tools_output(
             .get(server.as_str())
             .copied()
             .unwrap_or(McpAuthStatus::Unsupported);
-        let mut header: Vec<Span<'static>> = vec!["  ● ".into(), server.clone().into()];
+        let mut header: Vec<Span<'static>> = vec!["  • ".into(), server.clone().into()];
         if !cfg.enabled {
             header.push(" ".into());
             header.push("(disabled)".red());
@@ -1121,8 +1116,8 @@ pub(crate) fn new_mcp_tools_output(
             continue;
         }
         lines.push(header.into());
-        lines.push(vec!["    ● Status: ".into(), "enabled".green()].into());
-        lines.push(vec!["    ● Auth: ".into(), auth_status.to_string().into()].into());
+        lines.push(vec!["    • Status: ".into(), "enabled".green()].into());
+        lines.push(vec!["    • Auth: ".into(), auth_status.to_string().into()].into());
 
         match &cfg.transport {
             McpServerTransportConfig::Stdio {
@@ -1138,15 +1133,15 @@ pub(crate) fn new_mcp_tools_output(
                     format!(" {}", args.join(" "))
                 };
                 let cmd_display = format!("{command}{args_suffix}");
-                lines.push(vec!["    ● Command: ".into(), cmd_display.into()].into());
+                lines.push(vec!["    • Command: ".into(), cmd_display.into()].into());
 
                 if let Some(cwd) = cwd.as_ref() {
-                    lines.push(vec!["    ● Cwd: ".into(), cwd.display().to_string().into()].into());
+                    lines.push(vec!["    • Cwd: ".into(), cwd.display().to_string().into()].into());
                 }
 
                 let env_display = format_env_display(env.as_ref(), env_vars);
                 if env_display != "-" {
-                    lines.push(vec!["    ● Env: ".into(), env_display.into()].into());
+                    lines.push(vec!["    • Env: ".into(), env_display.into()].into());
                 }
             }
             McpServerTransportConfig::StreamableHttp {
@@ -1155,7 +1150,7 @@ pub(crate) fn new_mcp_tools_output(
                 env_http_headers,
                 ..
             } => {
-                lines.push(vec!["    ● URL: ".into(), url.clone().into()].into());
+                lines.push(vec!["    • URL: ".into(), url.clone().into()].into());
                 if let Some(headers) = http_headers.as_ref()
                     && !headers.is_empty()
                 {
@@ -1166,7 +1161,7 @@ pub(crate) fn new_mcp_tools_output(
                         .map(|(name, _)| format!("{name}=*****"))
                         .collect::<Vec<_>>()
                         .join(", ");
-                    lines.push(vec!["    ● HTTP headers: ".into(), display.into()].into());
+                    lines.push(vec!["    • HTTP headers: ".into(), display.into()].into());
                 }
                 if let Some(headers) = env_http_headers.as_ref()
                     && !headers.is_empty()
@@ -1178,23 +1173,23 @@ pub(crate) fn new_mcp_tools_output(
                         .map(|(name, var)| format!("{name}={var}"))
                         .collect::<Vec<_>>()
                         .join(", ");
-                    lines.push(vec!["    ● Env HTTP headers: ".into(), display.into()].into());
+                    lines.push(vec!["    • Env HTTP headers: ".into(), display.into()].into());
                 }
             }
         }
 
         if names.is_empty() {
-            lines.push("    ● Tools: (none)".into());
+            lines.push("    • Tools: (none)".into());
         } else {
-            lines.push(vec!["    ● Tools: ".into(), names.join(", ").into()].into());
+            lines.push(vec!["    • Tools: ".into(), names.join(", ").into()].into());
         }
 
         let server_resources: Vec<Resource> =
             resources.get(server.as_str()).cloned().unwrap_or_default();
         if server_resources.is_empty() {
-            lines.push("    ● Resources: (none)".into());
+            lines.push("    • Resources: (none)".into());
         } else {
-            let mut spans: Vec<Span<'static>> = vec!["    ● Resources: ".into()];
+            let mut spans: Vec<Span<'static>> = vec!["    • Resources: ".into()];
 
             for (idx, resource) in server_resources.iter().enumerate() {
                 if idx > 0 {
@@ -1215,9 +1210,9 @@ pub(crate) fn new_mcp_tools_output(
             .cloned()
             .unwrap_or_default();
         if server_templates.is_empty() {
-            lines.push("    ● Resource templates: (none)".into());
+            lines.push("    • Resource templates: (none)".into());
         } else {
-            let mut spans: Vec<Span<'static>> = vec!["    ● Resource templates: ".into()];
+            let mut spans: Vec<Span<'static>> = vec!["    • Resource templates: ".into()];
 
             for (idx, template) in server_templates.iter().enumerate() {
                 if idx > 0 {
@@ -1239,7 +1234,7 @@ pub(crate) fn new_mcp_tools_output(
     PlainHistoryCell { lines }
 }
 pub(crate) fn new_info_event(message: String, hint: Option<String>) -> PlainHistoryCell {
-    let mut line = vec!["● ".dim(), message.into()];
+    let mut line = vec!["• ".dim(), message.into()];
     if let Some(hint) = hint {
         line.push(" ".into());
         line.push(hint.dark_gray());
@@ -1297,7 +1292,7 @@ impl HistoryCell for PlanUpdateCell {
         };
 
         let mut lines: Vec<Line<'static>> = vec![];
-        lines.push(vec!["● ".dim(), "Updated Plan".bold()].into());
+        lines.push(vec!["• ".dim(), "Updated Plan".bold()].into());
 
         let mut indented_lines = vec![];
         let note = self
@@ -1365,7 +1360,7 @@ pub(crate) fn new_view_image_tool_call(path: PathBuf, cwd: &Path) -> PlainHistor
     let display_path = display_path_for(&path, cwd);
 
     let lines: Vec<Line<'static>> = vec![
-        vec!["● ".dim(), "Viewed Image".bold()].into(),
+        vec!["• ".dim(), "Viewed Image".bold()].into(),
         vec!["  └ ".dim(), display_path.dim()].into(),
     ];
 
@@ -1478,6 +1473,7 @@ mod tests {
     use serde_json::json;
     use std::collections::HashMap;
 
+    use codex_core::protocol::ExecCommandSource;
     use mcp_types::CallToolResult;
     use mcp_types::ContentBlock;
     use mcp_types::TextContent;
@@ -1878,9 +1874,10 @@ mod tests {
                 },
             ],
             output: None,
-            is_user_shell_command: false,
+            source: ExecCommandSource::Agent,
             start_time: Some(Instant::now()),
             duration: None,
+            interaction_input: None,
         });
         // Mark call complete so markers are ✓
         cell.complete_call(&call_id, CommandOutput::default(), Duration::from_millis(1));
@@ -1901,9 +1898,10 @@ mod tests {
                 cmd: "rg shimmer_spans".into(),
             }],
             output: None,
-            is_user_shell_command: false,
+            source: ExecCommandSource::Agent,
             start_time: Some(Instant::now()),
             duration: None,
+            interaction_input: None,
         });
         // Call 1: Search only
         cell.complete_call("c1", CommandOutput::default(), Duration::from_millis(1));
@@ -1917,7 +1915,8 @@ mod tests {
                     cmd: "cat shimmer.rs".into(),
                     path: "shimmer.rs".into(),
                 }],
-                false,
+                ExecCommandSource::Agent,
+                None,
             )
             .unwrap();
         cell.complete_call("c2", CommandOutput::default(), Duration::from_millis(1));
@@ -1931,7 +1930,8 @@ mod tests {
                     cmd: "cat status_indicator_widget.rs".into(),
                     path: "status_indicator_widget.rs".into(),
                 }],
-                false,
+                ExecCommandSource::Agent,
+                None,
             )
             .unwrap();
         cell.complete_call("c3", CommandOutput::default(), Duration::from_millis(1));
@@ -1964,9 +1964,10 @@ mod tests {
                 },
             ],
             output: None,
-            is_user_shell_command: false,
+            source: ExecCommandSource::Agent,
             start_time: Some(Instant::now()),
             duration: None,
+            interaction_input: None,
         });
         cell.complete_call("c1", CommandOutput::default(), Duration::from_millis(1));
         let lines = cell.display_lines(80);
@@ -1984,9 +1985,10 @@ mod tests {
             command: vec!["bash".into(), "-lc".into(), cmd],
             parsed: Vec::new(),
             output: None,
-            is_user_shell_command: false,
+            source: ExecCommandSource::Agent,
             start_time: Some(Instant::now()),
             duration: None,
+            interaction_input: None,
         });
         // Mark call complete so it renders as "Ran"
         cell.complete_call(&call_id, CommandOutput::default(), Duration::from_millis(1));
@@ -2006,9 +2008,10 @@ mod tests {
             command: vec!["echo".into(), "ok".into()],
             parsed: Vec::new(),
             output: None,
-            is_user_shell_command: false,
+            source: ExecCommandSource::Agent,
             start_time: Some(Instant::now()),
             duration: None,
+            interaction_input: None,
         });
         cell.complete_call(&call_id, CommandOutput::default(), Duration::from_millis(1));
         // Wide enough that it fits inline
@@ -2026,9 +2029,10 @@ mod tests {
             command: vec!["bash".into(), "-lc".into(), long],
             parsed: Vec::new(),
             output: None,
-            is_user_shell_command: false,
+            source: ExecCommandSource::Agent,
             start_time: Some(Instant::now()),
             duration: None,
+            interaction_input: None,
         });
         cell.complete_call(&call_id, CommandOutput::default(), Duration::from_millis(1));
         let lines = cell.display_lines(24);
@@ -2045,9 +2049,10 @@ mod tests {
             command: vec!["bash".into(), "-lc".into(), cmd],
             parsed: Vec::new(),
             output: None,
-            is_user_shell_command: false,
+            source: ExecCommandSource::Agent,
             start_time: Some(Instant::now()),
             duration: None,
+            interaction_input: None,
         });
         cell.complete_call(&call_id, CommandOutput::default(), Duration::from_millis(1));
         let lines = cell.display_lines(80);
@@ -2065,9 +2070,10 @@ mod tests {
             command: vec!["bash".into(), "-lc".into(), cmd],
             parsed: Vec::new(),
             output: None,
-            is_user_shell_command: false,
+            source: ExecCommandSource::Agent,
             start_time: Some(Instant::now()),
             duration: None,
+            interaction_input: None,
         });
         cell.complete_call(&call_id, CommandOutput::default(), Duration::from_millis(1));
         let lines = cell.display_lines(28);
@@ -2085,9 +2091,10 @@ mod tests {
             command: vec!["bash".into(), "-lc".into(), "seq 1 10 1>&2 && false".into()],
             parsed: Vec::new(),
             output: None,
-            is_user_shell_command: false,
+            source: ExecCommandSource::Agent,
             start_time: Some(Instant::now()),
             duration: None,
+            interaction_input: None,
         });
         let stderr: String = (1..=10)
             .map(|n| n.to_string())
@@ -2131,9 +2138,10 @@ mod tests {
             command: vec!["bash".into(), "-lc".into(), long_cmd.to_string()],
             parsed: Vec::new(),
             output: None,
-            is_user_shell_command: false,
+            source: ExecCommandSource::Agent,
             start_time: Some(Instant::now()),
             duration: None,
+            interaction_input: None,
         });
 
         let stderr = "error: first line on stderr\nerror: second line on stderr".to_string();
@@ -2240,10 +2248,10 @@ mod tests {
         );
 
         let rendered_display = render_lines(&cell.display_lines(80));
-        assert_eq!(rendered_display, vec!["● Detailed reasoning goes here."]);
+        assert_eq!(rendered_display, vec!["• Detailed reasoning goes here."]);
 
         let rendered_transcript = render_transcript(cell.as_ref());
-        assert_eq!(rendered_transcript, vec!["● Detailed reasoning goes here."]);
+        assert_eq!(rendered_transcript, vec!["• Detailed reasoning goes here."]);
     }
 
     #[test]
@@ -2255,7 +2263,7 @@ mod tests {
             new_reasoning_summary_block("Detailed reasoning goes here.".to_string(), &config);
 
         let rendered = render_transcript(cell.as_ref());
-        assert_eq!(rendered, vec!["● Detailed reasoning goes here."]);
+        assert_eq!(rendered, vec!["• Detailed reasoning goes here."]);
     }
 
     #[test]
@@ -2269,7 +2277,7 @@ mod tests {
         );
 
         let rendered = render_transcript(cell.as_ref());
-        assert_eq!(rendered, vec!["● **High level reasoning without closing"]);
+        assert_eq!(rendered, vec!["• **High level reasoning without closing"]);
     }
 
     #[test]
@@ -2283,7 +2291,7 @@ mod tests {
         );
 
         let rendered = render_transcript(cell.as_ref());
-        assert_eq!(rendered, vec!["● High level reasoning without closing"]);
+        assert_eq!(rendered, vec!["• High level reasoning without closing"]);
 
         let cell = new_reasoning_summary_block(
             "**High level reasoning without closing**\n\n  ".to_string(),
@@ -2291,7 +2299,7 @@ mod tests {
         );
 
         let rendered = render_transcript(cell.as_ref());
-        assert_eq!(rendered, vec!["● High level reasoning without closing"]);
+        assert_eq!(rendered, vec!["• High level reasoning without closing"]);
     }
 
     #[test]
@@ -2305,10 +2313,10 @@ mod tests {
         );
 
         let rendered_display = render_lines(&cell.display_lines(80));
-        assert_eq!(rendered_display, vec!["● We should fix the bug next."]);
+        assert_eq!(rendered_display, vec!["• We should fix the bug next."]);
 
         let rendered_transcript = render_transcript(cell.as_ref());
-        assert_eq!(rendered_transcript, vec!["● We should fix the bug next."]);
+        assert_eq!(rendered_transcript, vec!["• We should fix the bug next."]);
     }
 
     #[test]

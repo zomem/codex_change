@@ -333,6 +333,30 @@ pub(crate) fn highlight_sql_to_lines(code: &str) -> Vec<Line<'static>> {
     highlight_to_lines(code, sql_highlight_config())
 }
 
+pub(crate) fn highlight_log_to_lines(code: &str) -> Vec<Line<'static>> {
+    code.split('\n')
+        .map(|line| {
+            if line.is_empty() {
+                return Line::from("");
+            }
+            let lower = line.to_ascii_lowercase();
+            if lower.contains("error") {
+                Line::from(line.to_string().red().bold())
+            } else if lower.contains("warn") {
+                Line::from(line.to_string().yellow().bold())
+            } else if lower.contains("info") {
+                Line::from(line.to_string().cyan())
+            } else if lower.contains("debug") {
+                Line::from(line.to_string().magenta())
+            } else if lower.contains("trace") {
+                Line::from(line.to_string().dim())
+            } else {
+                Line::from(line.to_string())
+            }
+        })
+        .collect()
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

@@ -2,5 +2,5 @@
 source: tui/src/chatwidget/tests.rs
 expression: combined
 ---
-● Viewed Image
-  └ ~/zjLocal/rust/codex-rust-v0.58.0/codex-rs/tui/example.png
+• Viewed Image
+  └ example.png
